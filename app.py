@@ -1,104 +1,75 @@
-import streamlit as st
-import streamlit.components.v1 as components
-import google.generativeai as genai
 import os
+import streamlit as st
+from dotenv import load_dotenv
+import google.generativeai as genai
 
-# Page Configuration
-st.set_page_config(
-    page_title="EduGenie Dashboard", 
-    page_icon="🎓", 
-    layout="centered"
-)
+# Load environment variables
+load_dotenv()
 
-# --- INJECTING RAW HTML & CUSTOM CSS KEYFRAME ANIMATIONS ---
-ui_header_html = """
-<style>
-    @keyframes smoothGlow {
-        0% { color: #6366f1; text-shadow: 0 0 5px rgba(99, 102, 241, 0.2); }
-        50% { color: #a855f7; text-shadow: 0 0 15px rgba(168, 85, 247, 0.4); }
-        100% { color: #6366f1; text-shadow: 0 0 5px rgba(99, 102, 241, 0.2); }
-    }
-    .main-title {
-        font-family: 'Inter', system-ui, sans-serif;
-        font-size: 38px;
-        font-weight: 800;
+# Configure page settings
+st.set_page_config(page_title="EduGenie Core Engine", page_icon="✨", layout="centered")
+
+# Custom Title Animation (Matching your previous design!)
+st.markdown("""
+    <style>
+    .title-text {
         text-align: center;
-        letter-spacing: -0.5px;
-        animation: smoothGlow 4s ease-in-out infinite;
+        font-size: 3rem;
+        font-weight: bold;
+        background: linear-gradient(45deg, #FF4B4B, #FF8F8F);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        animation: pulse 2s infinite alternate;
     }
-    .description {
-        text-align: center;
-        font-family: system-ui, sans-serif;
-        color: #475569;
-        font-size: 15px;
-        margin-top: -5px;
-        margin-bottom: 25px;
+    @keyframes pulse {
+        0% { transform: scale(1); }
+        100% { transform: scale(1.02); }
     }
-</style>
-<div class="main-title">EduGenie Intelligent Assistant</div>
-<div class="description">Production Architecture: Integrated Generative AI Processing Interface</div>
-"""
+    </style>
+    <h1 class="title-text">EduGenie Core Engine ✨</h1>
+""", unsafe_allow_html=True)
 
-# Render animated banner
-components.html(ui_header_html, height=100)
-
-# Securely grab the API key from deployment environment secrets
-api_key = st.secrets.get("GEMINI_API_KEY") or os.getenv("GEMINI_API_KEY")
+# Fetch API Key directly
+api_key = os.getenv("GEMINI_API_KEY")
 
 if not api_key:
-    st.info("System Configuration Required: Please attach your GEMINI_API_KEY in the cloud deployment settings dashboard.", icon="🔑")
+    st.error("🔑 GEMINI_API_KEY is missing from your .env file setup!")
 else:
-    # Initialize the client engine
+    # Initialize the Google GenAI connection inside Streamlit directly
     genai.configure(api_key=api_key)
-    model = genai.GenerativeModel('gemini-1.5-flash')
+    # Using the current production-supported model version
+    model = genai.GenerativeModel('gemini-3.5-flash')
 
-    # Functional selection inputs
+    # Dropdown feature mapping matching your backend options
     feature = st.selectbox(
-        "Choose System Modality / Action:",
-        ["Concept Explanation", "Quiz Generation", "Learning Roadmap"]
+        "Select Core Inference Pipeline Feature Mode:",
+        ["Academic Explanation Engine", "Automated Quiz Generator", "Learning Roadmap Designer"]
     )
 
-    placeholder_map = {
-        "Concept Explanation": "e.g., Explain Pythagoras Theorem or Which is the largest ocean?",
-        "Quiz Generation": "e.g., Oceans and Rivers or Basic Python Loops",
-        "Learning Roadmap": "e.g., SQL Databases or Introduction to Machine Learning"
-    }
+    # Text Input Prompt area
+    user_input = st.text_input("Enter your core instruction NLP text corpus script query:", "")
 
-    user_input = st.text_area("What would you like to learn?", placeholder=placeholder_map[feature])
-
-    st.markdown("---")
-
-    if st.button("Execute Core Inference ✨", type="primary"):
+    # Execution Trigger Button
+    if st.button("Execute Core Inference ✨"):
         if not user_input.strip():
-            st.warning("Input prompt workspace cannot be left blank.")
+            st.warning("Please enter a valid prompt topic before executing inference.")
         else:
-            with st.spinner("Processing NLP Token Streams via Gemini Engine..."):
-                # --- PROMPT ENGINEERING & NATURAL LANGUAGE PROCESSING (NLP) ---
-                if "Explanation" in feature:
-                    system_context = (
-                        f"System: Act as an expert academic tutor. Break down the concept using simple terms, "
-                        f"provide real-world analogies, and add necessary context.\n"
-                        f"Task: Explain this clearly: {user_input}"
-                    )
-                elif "Quiz" in feature:
-                    system_context = (
-                        f"System: Act as an academic evaluation system. Generate a structured 3-question "
-                        f"multiple-choice quiz (A, B, C, D) based on the topic. Provide answers clearly separate at the end.\n"
-                        f"Task: Generate quiz for: {user_input}"
-                    )
-                elif "Roadmap" in feature:
-                    system_context = (
-                        f"System: Act as an educational consultant. Provide a detailed, step-by-step learning roadmap "
-                        f"divided into Beginner, Intermediate, and Advanced tiers with actionable resource tips.\n"
-                        f"Task: Create roadmap for: {user_input}"
-                    )
+            # Recreate the exact backend prompt contexts natively
+            if "Explanation" in feature:
+                system_context = f"System: Act as an expert academic tutor. Explain clearly: {user_input}"
+            elif "Quiz" in feature:
+                system_context = f"System: Act as an academic evaluation system. Generate a 3-question multiple choice quiz on: {user_input}"
+            else:
+                system_context = f"System: Act as an educational consultant. Create a detailed learning roadmap for: {user_input}"
 
+            with st.spinner("Processing prompt query directly through Gemini Engine pipeline..."):
                 try:
+                    # Generate content directly on the frontend panel layout
                     response = model.generate_content(system_context)
-                    st.success("Data Inference Complete!")
-                    st.info(f"Modality Applied: {feature}")
                     
-                    st.markdown("### 📋 EduGenie Output Results")
+                    st.success("Data Inference Complete!")
+                    st.markdown("### 📋 Generated Educational Content Output:")
                     st.markdown(response.text)
+                    
                 except Exception as e:
-                    st.error(f"Inference Engine Failure: {str(e)}")
+                    st.error(f"Inference Processing Error: {e}")
